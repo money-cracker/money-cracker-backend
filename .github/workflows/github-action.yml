@@ -1,0 +1,62 @@
+# workflow name
+name: Deploy to Amazon EC2 / Spring Boot with Maven
+
+# env variables
+env:
+  PROJECT_NAME: money-cracker-backend
+  BUCKET_NAME: mc-github-actions-be
+  CODE_DEPLOY_APP: MC-BE-deploy
+  CODE_DEPLOY_DEPLOYMENT_GROUP: MC-BE-deploy-group
+
+# trigger
+on:
+  release:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: CI/CD
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+
+      # Caching dependencies
+      - name: Cache Maven packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      - name: Make zip file
+        run: zip -r ./$PROJECT_NAME.zip .
+        shell: bash
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION}}
+
+      # Upload to S3 storage
+      - name: Upload to S3
+        run: aws s3 cp $PROJECT_NAME.zip s3://$BUCKET_NAME/deploy/$PROJECT_NAME.zip --region ap-northeast-2
+
+      # Deploy
+      - name: Code Deploy
+        run: >
+          aws deploy create-deployment --application-name $CODE_DEPLOY_APP
+          --deployment-config-name CodeDeployDefault.AllAtOnce
+          --deployment-group-name $CODE_DEPLOY_DEPLOYMENT_GROUP
+          --s3-location bucket=$BUCKET_NAME,bundleType=zip,key=deploy/$PROJECT_NAME.zip
