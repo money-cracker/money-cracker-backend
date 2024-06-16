@@ -10,8 +10,8 @@ env:
 
 # trigger
 on:
-  release:
-    branches: [ "main" ]
+  push:
+    branches: [ main ]
 
 jobs:
   build:
