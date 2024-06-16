@@ -11,7 +11,7 @@ env:
 # trigger
 on:
   release:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   build:
