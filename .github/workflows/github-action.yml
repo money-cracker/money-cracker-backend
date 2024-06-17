@@ -49,7 +49,7 @@ jobs:
           jq -r ".SecretString" >> ./env.properties
 
       - name: Build with Maven
-        run: mvn -B package --file pom.xml -Dspring-boot.run.arguments=--spring.config.location=file:./env.properties
+        run: mvn -B package --file pom.xml -Dspring-boot.run.arguments=--spring.config.location=file:./prod-env.properties
 
       - name: Make zip file
         run: zip -r ./$PROJECT_NAME.zip .
