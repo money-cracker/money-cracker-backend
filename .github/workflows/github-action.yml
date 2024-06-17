@@ -46,10 +46,10 @@ jobs:
         run: |
           AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
           aws secretsmanager get-secret-value --region ${{ secrets.AWS_REGION }} --secret-id prod/env.properties | \
-          jq -r ".SecretString" >> ./env.properties
+          jq -r ".SecretString" >> src/main/resources/prod-env.properties
 
       - name: Build with Maven
-        run: mvn -B package --file pom.xml -Dspring-boot.run.arguments=--spring.config.location=file:./prod-env.properties
+        run: mvn -B package --file pom.xml -Dspring-boot.run.arguments=--spring.config.location=file:src/main/resources/prod-env.properties
 
       - name: Make zip file
         run: zip -r ./$PROJECT_NAME.zip .
