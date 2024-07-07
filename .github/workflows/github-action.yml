@@ -55,6 +55,15 @@ jobs:
         run: zip -r ./$PROJECT_NAME.zip .
         shell: bash
 
+      - name: Get GitHub Actions runner IP
+        id: get_ip
+        run: echo "::set-output name=ip_address::$(curl -s https://api.github.com/meta | jq -r '.actions')"
+
+      - name: Configure inbound rules
+        run: |
+           aws ec2 authorize-security-group-ingress --group-name {{ secrets.SECURITY_GROUP_NAME }} \ 
+          --protocol tcp --port 8080 --cidr ${{ steps.get_ip.outputs.ip_address }}/32
+
       # Upload to S3 storage
       - name: Upload to S3
         run: aws s3 cp $PROJECT_NAME.zip s3://$BUCKET_NAME/deploy/$PROJECT_NAME.zip --region ap-northeast-2
