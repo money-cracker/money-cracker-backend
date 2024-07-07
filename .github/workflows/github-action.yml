@@ -61,7 +61,7 @@ jobs:
 
       - name: Configure inbound rules
         run: |
-           aws ec2 authorize-security-group-ingress --group-name {{ secrets.SECURITY_GROUP_NAME }} \ 
+          aws ec2 authorize-security-group-ingress --group-name ${{ secrets.SECURITY_GROUP_NAME }} \
           --protocol tcp --port 8080 --cidr ${{ steps.get_ip.outputs.ip_address }}/32
 
       # Upload to S3 storage
@@ -70,8 +70,8 @@ jobs:
 
       # Deploy
       - name: Code Deploy
-        run: >
-          aws deploy create-deployment --application-name $CODE_DEPLOY_APP
-          --deployment-config-name CodeDeployDefault.AllAtOnce
-          --deployment-group-name $CODE_DEPLOY_DEPLOYMENT_GROUP
+        run: |
+          aws deploy create-deployment --application-name $CODE_DEPLOY_APP \
+          --deployment-config-name CodeDeployDefault.AllAtOnce \
+          --deployment-group-name $CODE_DEPLOY_DEPLOYMENT_GROUP \
           --s3-location bucket=$BUCKET_NAME,bundleType=zip,key=deploy/$PROJECT_NAME.zip
