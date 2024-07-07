@@ -48,21 +48,26 @@ jobs:
           aws secretsmanager get-secret-value --region ${{ secrets.AWS_REGION }} --secret-id prod/env.properties | \
           jq -r ".SecretString" >> src/main/resources/prod-env.properties
 
+      - name: Get GitHub Actions runner IP
+        id: get_ip
+        run: echo "::set-output name=ip_address::$(curl -s https://api.github.com/meta | jq -r '.actions')"
+
+      - name: Add IP to EC2 security group
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.EC2_SECURITY_GROUP_ID }} \
+          --protocol tcp --port 8080 --cidr ${{ steps.get_ip.outputs.ip_address }}/32
+
+      - name: Add IP to RDS security group
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.RDS_SECURITY_GROUP_ID }} \
+          --protocol tcp --port 3306 --cidr ${{ steps.get_ip.outputs.ip_address }}/32
+
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dspring-boot.run.arguments=--spring.config.location=file:src/main/resources/prod-env.properties
 
       - name: Make zip file
         run: zip -r ./$PROJECT_NAME.zip .
         shell: bash
-
-      - name: Get GitHub Actions runner IP
-        id: get_ip
-        run: echo "::set-output name=ip_address::$(curl -s https://api.github.com/meta | jq -r '.actions')"
-
-      - name: Configure inbound rules
-        run: |
-          aws ec2 authorize-security-group-ingress --group-name ${{ secrets.SECURITY_GROUP_NAME }} \
-          --protocol tcp --port 8080 --cidr ${{ steps.get_ip.outputs.ip_address }}/32
 
       # Upload to S3 storage
       - name: Upload to S3
