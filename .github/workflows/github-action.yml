@@ -67,18 +67,19 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml -Dspring-boot.run.arguments=--spring.config.location=file:src/main/resources/prod-env.properties
 
-      - name: Make zip file
-        run: zip -r ./$PROJECT_NAME.zip .
-        shell: bash
-
-      # Upload to S3 storage
-      - name: Upload to S3
-        run: aws s3 cp $PROJECT_NAME.zip s3://$BUCKET_NAME/deploy/$PROJECT_NAME.zip --region ap-northeast-2
-
-      # Deploy
-      - name: Code Deploy
+      - name: web docker build and push
         run: |
-          aws deploy create-deployment --application-name $CODE_DEPLOY_APP \
-          --deployment-config-name CodeDeployDefault.AllAtOnce \
-          --deployment-group-name $CODE_DEPLOY_DEPLOYMENT_GROUP \
-          --s3-location bucket=$BUCKET_NAME,bundleType=zip,key=deploy/$PROJECT_NAME.zip
+         docker login -u ${{ secrets.DOCKER_ID }} -p ${{ secrets.DOCKER_PASSWORD }}
+         docker build -t ${{ secrets.DOCKER_REPO }}/money-cracker-be .
+         docker push ${{ secrets.DOCKER_REPO }}/money-cracker-be
+
+      - name: executing remote ssh commands using password
+        uses: appleboy/ssh-action@master
+        with:
+           host: ${{ secrets.HOST_ID }}
+           username: ubuntu
+           script: |
+             sudo docker rm -f $(docker ps -qa)
+             sudo docker pull ${{ secrets.DOCKER_REPO }}/money-cracker-be
+             docker run -p 9000:8080 ${{ secrets.DOCKER_REPO }}/money-cracker-be
+             docker image prune -f
